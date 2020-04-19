@@ -1,11 +1,22 @@
 import React, { Component } from "react";
-import SimpleStorageContract from "./contracts/SimpleStorage.json";
+import MyToken from "./contracts/MyToken.json";
+import MyTokenSale from "./contracts/MyTokenSale.json";
+import KycContract from "./contracts/KycContract.json";
+
+
 import getWeb3 from "./getWeb3";
 
 import "./App.css";
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+  state = { 
+    loaded: false,
+    web3: null,
+    accounts: null,
+    myToken: null,
+    myTokenSale: null,
+    kycContract: null
+  };
 
   componentDidMount = async () => {
     try {
@@ -16,16 +27,26 @@ class App extends Component {
       const accounts = await web3.eth.getAccounts();
 
       // Get the contract instance.
-      const networkId = await web3.eth.net.getId();
-      const deployedNetwork = SimpleStorageContract.networks[networkId];
-      const instance = new web3.eth.Contract(
-        SimpleStorageContract.abi,
-        deployedNetwork && deployedNetwork.address,
+      const networkId = 5777
+
+      console.log(MyToken.networks)
+      const myToken = new web3.eth.Contract(
+        MyToken.abi,
+        MyToken.networks[networkId] && MyToken.networks[networkId].address
       );
 
-      // Set web3, accounts, and contract to the state, and then proceed with an
-      // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance }, this.runExample);
+      const myTokenSale = new web3.eth.Contract(
+        MyTokenSale.abi,
+        MyTokenSale.networks[networkId] && MyTokenSale.networks[networkId].address
+      );
+
+      const kycContract = new web3.eth.Contract(
+        KycContract.abi,
+        KycContract.networks[networkId] && KycContract.networks[networkId].address
+      );
+
+      this.setState({ loaded: true, web3, accounts, myToken, myTokenSale, kycContract }, this.fetchUserTokens);
+      this.listenToTokenTransfer()
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
@@ -33,40 +54,59 @@ class App extends Component {
       );
       console.error(error);
     }
-  };
+  }
 
-  runExample = async () => {
-    const { accounts, contract } = this.state;
+  fetchUserTokens = async () => {
+    const userTokens = await this.state.myToken.methods.balanceOf(this.state.accounts[0]).call()
+    this.setState({ userTokens })
+  }
 
-    // Stores a given value, 5 by default.
-    await contract.methods.set(5).send({ from: accounts[0] });
+  listenToTokenTransfer = async () => {
+    this.state.myToken.events.Transfer({ to: this.state.accounts[0] }).on('data', this.fetchUserTokens)
+  }
 
-    // Get the value from the contract to prove it worked.
-    const response = await contract.methods.get().call();
+  handleKycSubmit = async () => {
+    const { kycAddress } = this.state
+    await this.state.kycContract.methods.setKycCompleted(kycAddress).send({ from: this.state.accounts[0] })
+    alert(`Account ${kycAddress} is now whitelisted`)
+  }
 
-    // Update state with the result.
-    this.setState({ storageValue: response });
-  };
+  handleInputChange = (event) => {
+    const target = event.target
+    const value = target.type === 'checkbox' ? target.checked : target.value
+    const name = target.name
+    this.setState({
+      [name]: value
+    })
+  }
 
   render() {
-    if (!this.state.web3) {
-      return <div>Loading Web3, accounts, and contract...</div>;
+    if (!this.state.loaded) {
+      return <div>Loading Web3, accounts, and contract...</div>
     }
     return (
       <div className="App">
-        <h1>Good to Go!</h1>
-        <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
-        <p>
-          If your contracts compiled and migrated successfully, below will show
-          a stored value of 5 (by default).
-        </p>
-        <p>
-          Try changing the value stored on <strong>line 40</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
+        <h1>Capuccino Token for StarDucks</h1>
+        <div>
+          <h2>Enable your account</h2>
+          <p>
+            Address to allow:
+              <input type="text" name="kycAddress" value={this.state.kycAddress} onChange={this.handleInputChange} />
+              <button onClick={this.handleKycSubmit}>Add to Whitelist</button>
+          </p>
+          <p>
+            Try changing the value stored on <strong>line 40</strong> of App.js.
+          </p>
+        </div>
+        <div>
+          <h2>Buy cappucino-tokens</h2>
+          <p>Send Ether to this address: {this.state.myTokenSale._address}</p>
+        </div>
+
+        User now has {this.state.userTokens} CAPPU
+
       </div>
-    );
+    )
   }
 }
 
