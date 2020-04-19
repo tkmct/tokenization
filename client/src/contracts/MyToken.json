@@ -1029,11 +1029,11 @@
       },
       "links": {},
       "address": "0x661E0De345B6AE4848c4Efd7F4094ae1014091F7",
-      "transactionHash": "0x3e7c22ab717dc7fc25677305e446c72a35801763c37158b132e4d6be10958d6d"
+      "transactionHash": "0x95e2a38a66267cd985ddaee248f32e76d2c298cc023e2b2eb50dd0791cd2599c"
     }
   },
   "schemaVersion": "3.1.0",
-  "updatedAt": "2020-04-18T09:59:17.034Z",
+  "updatedAt": "2020-04-19T00:58:53.110Z",
   "networkType": "ethereum",
   "devdoc": {
     "methods": {
